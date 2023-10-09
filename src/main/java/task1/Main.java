@@ -1,4 +1,7 @@
-package org.example;
+package task1;
+
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class Main {
     public static void main(String[] args) {
@@ -17,38 +20,37 @@ class Resources {
 
     private static final int CAPACITY = 5;
     private int counter = 0;
+    private final ReentrantLock lock = new ReentrantLock();
+    private final Condition cond = lock.newCondition();
 
-
-    // Resources.class
-    public static synchronized void  method() {
-        // start
-
-
-        //end
-    }
-
-    public static synchronized void method2() {
-
-    }
-
-    public synchronized void increaseCounter() {
-        while(counter == CAPACITY){
-            waitSomeTime();
+    public void increaseCounter() {
+        lock.lock();
+        try {
+            while (counter == CAPACITY) {
+                waitSomeTime();
+            }
+            Thread thread = Thread.currentThread();
+            ++counter;
+            System.out.println("Increase counter, thread: " + thread.getName() + ", counter= " + counter);
+        } finally {
+            cond.signal();
+            lock.unlock();
         }
-        Thread thread = Thread.currentThread();
-        ++counter;
-        System.out.println("Increase counter, thread: " + thread.getName() + ", counter= " + counter);
-        notify();
     }
 
-    public synchronized void decreaseCounter() {
-        while (counter == 0){
-            waitSomeTime();
+    public void decreaseCounter() {
+        lock.lock();
+        try {
+            while (counter == 0) {
+                waitSomeTime();
+            }
+            Thread thread = Thread.currentThread();
+            --counter;
+            System.out.println("Decrease counter, thread: " + thread.getName() + ", counter= " + counter);
+        }finally {
+            cond.signal();
+            lock.unlock();
         }
-        Thread thread = Thread.currentThread();
-        --counter;
-        System.out.println("Decrease counter, thread: " + thread.getName() + ", counter= " + counter);
-        notify();
     }
 
     private static void sleep(int time) {
@@ -61,7 +63,7 @@ class Resources {
 
     private void waitSomeTime() {
         try {
-            wait();
+            cond.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -77,7 +79,7 @@ class Consumer extends Thread {
 
     Consumer(Resources resources) {
         this.resources = resources;
-        setName("Consumer");
+        setName("ConsumerProducer.Consumer");
     }
 
 
@@ -96,7 +98,7 @@ class Producer extends Thread {
 
     Producer(Resources resources) {
         this.resources = resources;
-        setName("Producer");
+        setName("ConsumerProducer.Producer");
     }
 
     @Override
